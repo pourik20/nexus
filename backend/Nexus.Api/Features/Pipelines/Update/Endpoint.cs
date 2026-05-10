@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Nexus.Api.Domain;
+using Nexus.Api.Infrastructure.SignalR;
 using Nexus.Api.Infrastructure.Validation;
 
 namespace Nexus.Api.Features.Pipelines.Update;
@@ -8,7 +9,12 @@ public static class UpdatePipelineEndpoint
 {
     public static void Map(IEndpointRouteBuilder app)
     {
-        app.MapPatch("/pipelines/{id}", async (string id, UpdatePipelineRequest req, IMongoCollection<Pipeline> col, CancellationToken ct) =>
+        app.MapPatch("/pipelines/{id}", async (
+            string id,
+            UpdatePipelineRequest req,
+            IMongoCollection<Pipeline> col,
+            INotificationService notifications,
+            CancellationToken ct) =>
         {
             var updates = new List<UpdateDefinition<Pipeline>>();
             if (req.Name is not null) updates.Add(Builders<Pipeline>.Update.Set(p => p.Name, req.Name.Trim()));
@@ -32,9 +38,11 @@ public static class UpdatePipelineEndpoint
                 new FindOneAndUpdateOptions<Pipeline> { ReturnDocument = ReturnDocument.After },
                 ct);
 
-            return updated is null
-                ? Results.Problem(title: "Pipeline not found", statusCode: 404)
-                : Results.Ok(updated.ToDto());
+            if (updated is null)
+                return Results.Problem(title: "Pipeline not found", statusCode: 404);
+
+            await notifications.PipelineUpdated(updated.Id, "updated", ct);
+            return Results.Ok(updated.ToDto());
         })
         .AddEndpointFilter<ValidationFilter<UpdatePipelineRequest>>()
         .WithName("UpdatePipeline");

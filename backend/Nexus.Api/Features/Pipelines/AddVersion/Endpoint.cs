@@ -2,6 +2,7 @@ using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Nexus.Api.Domain;
+using Nexus.Api.Infrastructure.SignalR;
 
 namespace Nexus.Api.Features.Pipelines.AddVersion;
 
@@ -13,6 +14,7 @@ public static class AddVersionEndpoint
             string id,
             AddVersionRequest req,
             IMongoCollection<Pipeline> col,
+            INotificationService notifications,
             CancellationToken ct) =>
         {
             var pipeline = await col.Find(p => p.Id == id).FirstOrDefaultAsync(ct);
@@ -43,9 +45,11 @@ public static class AddVersionEndpoint
                 new FindOneAndUpdateOptions<Pipeline> { ReturnDocument = ReturnDocument.After },
                 ct);
 
-            return updated is null
-                ? Results.Problem(title: "Pipeline not found", statusCode: 404)
-                : Results.Created($"/pipelines/{id}/versions/{version.Id}", updated.ToDto());
+            if (updated is null)
+                return Results.Problem(title: "Pipeline not found", statusCode: 404);
+
+            await notifications.PipelineUpdated(updated.Id, "updated", ct);
+            return Results.Created($"/pipelines/{id}/versions/{version.Id}", updated.ToDto());
         })
         .WithName("AddPipelineVersion");
     }

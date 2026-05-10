@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Nexus.Api.Domain;
+using Nexus.Api.Infrastructure.SignalR;
 
 namespace Nexus.Api.Features.Pipelines.ActivateVersion;
 
@@ -12,6 +13,7 @@ public static class ActivateVersionEndpoint
             string id,
             string versionId,
             IMongoCollection<Pipeline> col,
+            INotificationService notifications,
             CancellationToken ct) =>
         {
             var filter = Builders<Pipeline>.Filter.And(
@@ -49,6 +51,7 @@ public static class ActivateVersionEndpoint
                     : Results.Problem(title: "Pipeline not found", statusCode: 404);
             }
 
+            await notifications.PipelineUpdated(updated.Id, "updated", ct);
             return Results.Ok(updated.ToDto());
         })
         .WithName("ActivatePipelineVersion");

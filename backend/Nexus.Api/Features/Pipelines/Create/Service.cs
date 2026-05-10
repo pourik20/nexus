@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Nexus.Api.Domain;
+using Nexus.Api.Infrastructure.SignalR;
 
 namespace Nexus.Api.Features.Pipelines.Create;
 
@@ -8,11 +9,16 @@ public class CreatePipelineService
 {
     private readonly IMongoCollection<Pipeline> _pipelines;
     private readonly IMongoCollection<Dataset> _datasets;
+    private readonly INotificationService _notifications;
 
-    public CreatePipelineService(IMongoCollection<Pipeline> pipelines, IMongoCollection<Dataset> datasets)
+    public CreatePipelineService(
+        IMongoCollection<Pipeline> pipelines,
+        IMongoCollection<Dataset> datasets,
+        INotificationService notifications)
     {
         _pipelines = pipelines;
         _datasets = datasets;
+        _notifications = notifications;
     }
 
     public async Task<Pipeline> Handle(CreatePipelineRequest req, CancellationToken ct)
@@ -46,6 +52,7 @@ public class CreatePipelineService
         };
 
         await _pipelines.InsertOneAsync(p, cancellationToken: ct);
+        await _notifications.PipelineUpdated(p.Id, "created", ct);
         return p;
     }
 }

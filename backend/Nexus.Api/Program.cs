@@ -4,6 +4,7 @@ using Nexus.Api.Features.Pipelines;
 using Nexus.Api.Infrastructure.Auth;
 using Nexus.Api.Infrastructure.Errors;
 using Nexus.Api.Infrastructure.Mongo;
+using Nexus.Api.Infrastructure.SignalR;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,9 @@ builder.Services.AddScoped(typeof(Nexus.Api.Infrastructure.Validation.Validation
 builder.Services.AddDatasets();
 builder.Services.AddPipelines();
 
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
+
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
@@ -41,6 +45,7 @@ app.MapOpenApi();
 
 app.MapDatasets();
 app.MapPipelines();
+app.MapHub<ControlHub>("/hubs/control");
 
 app.MapGet("/", () => Results.Ok(new { name = "Nexus API", status = "ok" }));
 
