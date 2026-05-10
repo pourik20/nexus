@@ -78,7 +78,12 @@ export function RunsView({ initialData, pipelines }: { initialData: JobRun[]; pi
       {isLoading && <LoadingState />}
       {isError && <ErrorState message={(error as Error).message} />}
       {!isLoading && !isError && (!data || data.length === 0) && (
-        <EmptyState title="No runs match these filters" />
+        <EmptyState
+          title={Object.keys(filters).length === 0 ? "No runs yet" : "No runs match these filters"}
+          hint={Object.keys(filters).length === 0
+            ? "Trigger a run from a pipeline detail page."
+            : "Try adjusting the filters above."}
+        />
       )}
       {!isLoading && !isError && data && data.length > 0 && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">

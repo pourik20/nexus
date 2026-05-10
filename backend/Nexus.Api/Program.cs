@@ -3,6 +3,8 @@ using Nexus.Api.Features.Datasets;
 using Nexus.Api.Features.Pipelines;
 using Nexus.Api.Features.Runs;
 using Nexus.Api.Features.Alerts;
+using Nexus.Api.Features.Dashboard;
+using Nexus.Api.Infrastructure.Seed;
 using Nexus.Api.Infrastructure.Auth;
 using Nexus.Api.Infrastructure.Errors;
 using Nexus.Api.Infrastructure.Mongo;
@@ -15,7 +17,7 @@ builder.Host.UseSerilog((ctx, lc) => lc
     .ReadFrom.Configuration(ctx.Configuration)
     .WriteTo.Console());
 
-builder.WebHost.ConfigureKestrel(o => o.ListenAnyIP(5000));
+builder.WebHost.ConfigureKestrel(o => o.ListenAnyIP(3001));
 
 builder.Services.AddMongo(builder.Configuration);
 builder.Services.AddHostedService<IndexInitializerHostedService>();
@@ -29,6 +31,7 @@ builder.Services.AddDatasets();
 builder.Services.AddPipelines();
 builder.Services.AddRuns();
 builder.Services.AddAlerts();
+builder.Services.AddScoped<DatabaseSeeder>();
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
@@ -51,8 +54,20 @@ app.MapDatasets();
 app.MapPipelines();
 app.MapRuns();
 app.MapAlerts();
+app.MapDashboard();
 app.MapHub<ControlHub>("/hubs/control");
 
 app.MapGet("/", () => Results.Ok(new { name = "Nexus API", status = "ok" }));
+
+// Seed CLI: dotnet run -- --seed
+if (args.Contains("--seed"))
+{
+    await app.StartAsync();
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    await seeder.SeedAsync();
+    await app.StopAsync();
+    return;
+}
 
 app.Run();

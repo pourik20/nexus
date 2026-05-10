@@ -8,5 +8,32 @@ services:
     volumes:
       - nexus-mongo-data:/data/db
 
+  api:
+    build:
+      context: ./backend/Nexus.Api
+      dockerfile: Dockerfile
+    container_name: nexus-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - Mongo__ConnectionString=mongodb://mongo:27017
+      - Mongo__Database=nexus
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexus-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+    depends_on:
+      - api
+
 volumes:
   nexus-mongo-data:
