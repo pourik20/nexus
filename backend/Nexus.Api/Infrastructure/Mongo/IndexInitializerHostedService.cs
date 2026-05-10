@@ -21,6 +21,8 @@ public class IndexInitializerHostedService : IHostedService
         var pipelines = scope.ServiceProvider.GetRequiredService<IMongoCollection<Pipeline>>();
         var jobRuns = scope.ServiceProvider.GetRequiredService<IMongoCollection<JobRun>>();
         var jobRunSteps = scope.ServiceProvider.GetRequiredService<IMongoCollection<JobRunStep>>();
+        var alertRules = scope.ServiceProvider.GetRequiredService<IMongoCollection<AlertRule>>();
+        var alertEvents = scope.ServiceProvider.GetRequiredService<IMongoCollection<AlertEvent>>();
 
         await datasets.Indexes.CreateOneAsync(
             new CreateIndexModel<Dataset>(
@@ -46,6 +48,20 @@ public class IndexInitializerHostedService : IHostedService
             new CreateIndexModel<JobRunStep>(
                 Builders<JobRunStep>.IndexKeys.Ascending(s => s.RunId),
                 new CreateIndexOptions { Name = "ix_jobRunSteps_runId" }),
+            cancellationToken: ct);
+
+        await alertRules.Indexes.CreateOneAsync(
+            new CreateIndexModel<AlertRule>(
+                Builders<AlertRule>.IndexKeys.Ascending(r => r.PipelineId),
+                new CreateIndexOptions { Name = "ix_alertRules_pipelineId" }),
+            cancellationToken: ct);
+
+        await alertEvents.Indexes.CreateOneAsync(
+            new CreateIndexModel<AlertEvent>(
+                Builders<AlertEvent>.IndexKeys
+                    .Descending(e => e.CreatedAt)
+                    .Ascending(e => e.PipelineId),
+                new CreateIndexOptions { Name = "ix_alertEvents_createdAt_pipelineId" }),
             cancellationToken: ct);
 
         _log.LogInformation("Mongo indexes ensured.");

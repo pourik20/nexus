@@ -5,17 +5,20 @@ using Nexus.Api.Features.Runs;
 using Nexus.Api.Infrastructure.SignalR;
 using Nexus.Api.Infrastructure.SignalR.Events;
 
+using Nexus.Api.Features.Alerts;
+
 namespace Nexus.Api.Tests;
 
 public class RunStateServiceTests
 {
-    private static (RunStateService svc, Mock<IMongoCollection<JobRun>> runs, Mock<IMongoCollection<JobRunStep>> steps, Mock<INotificationService> notifications) Build()
+    private static (RunStateService svc, Mock<IMongoCollection<JobRun>> runs, Mock<IMongoCollection<JobRunStep>> steps, Mock<INotificationService> notifications, Mock<IAlertEvaluator> alertEvaluator) Build()
     {
         var runs = new Mock<IMongoCollection<JobRun>>();
         var steps = new Mock<IMongoCollection<JobRunStep>>();
         var notifications = new Mock<INotificationService>();
-        var svc = new RunStateService(runs.Object, steps.Object, notifications.Object);
-        return (svc, runs, steps, notifications);
+        var alertEvaluator = new Mock<IAlertEvaluator>();
+        var svc = new RunStateService(runs.Object, steps.Object, notifications.Object, alertEvaluator.Object);
+        return (svc, runs, steps, notifications, alertEvaluator);
     }
 
     private static JobRun PendingRun(string id = "run1") => new()
@@ -36,7 +39,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Start_TransitionsPendingToRunning_AndEmitsEvent()
     {
-        var (svc, runs, _, notifications) = Build();
+        var (svc, runs, _, notifications, _) = Build();
         var run = PendingRun();
         runs.SetupFindReturning(new[] { run });
         runs.SetupFindOneAndUpdateReturning(new JobRun { Id = run.Id, PipelineId = run.PipelineId, Status = RunStatus.Running, StartedAt = DateTime.UtcNow });
@@ -49,7 +52,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Start_OnNonExistentRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(Array.Empty<JobRun>());
         await Assert.ThrowsAsync<DomainException>(() => svc.Start(PendingRun()));
     }
@@ -57,7 +60,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Start_OnAlreadyRunningRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         await Assert.ThrowsAsync<DomainException>(() => svc.Start(RunningRun()));
     }
@@ -65,7 +68,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task BeginStep_OnRunningRun_TransitionsStepToRunning()
     {
-        var (svc, runs, steps, notifications) = Build();
+        var (svc, runs, steps, notifications, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         var step = new JobRunStep { Id = "s1", RunId = "run1", Name = StepNames.Extract, Order = 0, Status = RunStatus.Pending };
         steps.SetupFindReturning(new[] { step });
@@ -79,7 +82,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task BeginStep_OnNonRunningRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(new[] { PendingRun() });
         await Assert.ThrowsAsync<DomainException>(() => svc.BeginStep("run1", StepNames.Extract));
     }
@@ -87,7 +90,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task BeginStep_OnNonExistentStep_Throws()
     {
-        var (svc, runs, steps, _) = Build();
+        var (svc, runs, steps, _, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         steps.SetupFindReturning(Array.Empty<JobRunStep>());
         await Assert.ThrowsAsync<DomainException>(() => svc.BeginStep("run1", StepNames.Extract));
@@ -96,7 +99,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task CompleteStep_OnRunningStep_TransitionsToSuccess()
     {
-        var (svc, runs, steps, notifications) = Build();
+        var (svc, runs, steps, notifications, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         var step = new JobRunStep { Id = "s1", RunId = "run1", Name = StepNames.Extract, Order = 0, Status = RunStatus.Running, StartedAt = DateTime.UtcNow };
         steps.SetupFindReturning(new[] { step });
@@ -110,7 +113,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task CompleteStep_OnPendingStep_Throws()
     {
-        var (svc, runs, steps, _) = Build();
+        var (svc, runs, steps, _, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         steps.SetupFindReturning(new[] { new JobRunStep { Id = "s1", RunId = "run1", Name = StepNames.Extract, Order = 0, Status = RunStatus.Pending } });
         await Assert.ThrowsAsync<DomainException>(() => svc.CompleteStep("run1", StepNames.Extract, true));
@@ -119,7 +122,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task CompleteStep_OnNonExistentStep_Throws()
     {
-        var (svc, runs, steps, _) = Build();
+        var (svc, runs, steps, _, _) = Build();
         runs.SetupFindReturning(new[] { RunningRun() });
         steps.SetupFindReturning(Array.Empty<JobRunStep>());
         await Assert.ThrowsAsync<DomainException>(() => svc.CompleteStep("run1", "missing", true));
@@ -128,7 +131,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Complete_OnRunningRun_TransitionsToSuccess()
     {
-        var (svc, runs, _, notifications) = Build();
+        var (svc, runs, _, notifications, alertEvaluator) = Build();
         var running = RunningRun();
         runs.SetupFindReturning(new[] { running });
         runs.SetupFindOneAndUpdateReturning(new JobRun { Id = running.Id, PipelineId = running.PipelineId, Status = RunStatus.Success, StartedAt = running.StartedAt, FinishedAt = DateTime.UtcNow });
@@ -137,12 +140,13 @@ public class RunStateServiceTests
 
         notifications.Verify(n => n.RunStateChanged(It.Is<RunStateChanged>(e => e.Status == RunStatus.Success), It.IsAny<CancellationToken>()), Times.Once);
         notifications.Verify(n => n.PipelineUpdated(running.PipelineId, "updated", It.IsAny<CancellationToken>()), Times.Once);
+        alertEvaluator.Verify(a => a.EvaluateForRun(running.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Complete_OnPendingRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(new[] { PendingRun() });
         await Assert.ThrowsAsync<DomainException>(() => svc.Complete("run1", true));
     }
@@ -150,7 +154,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Complete_OnTerminalRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(new[] { TerminalRun(RunStatus.Success) });
         await Assert.ThrowsAsync<DomainException>(() => svc.Complete("run1", true));
     }
@@ -158,7 +162,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Complete_OnNonExistentRun_Throws()
     {
-        var (svc, runs, _, _) = Build();
+        var (svc, runs, _, _, _) = Build();
         runs.SetupFindReturning(Array.Empty<JobRun>());
         await Assert.ThrowsAsync<DomainException>(() => svc.Complete("run1", true));
     }
@@ -166,7 +170,7 @@ public class RunStateServiceTests
     [Fact]
     public async Task Complete_WithFailure_PassesErrorMessage()
     {
-        var (svc, runs, _, notifications) = Build();
+        var (svc, runs, _, notifications, _) = Build();
         var running = RunningRun();
         runs.SetupFindReturning(new[] { running });
         runs.SetupFindOneAndUpdateReturning(new JobRun { Id = running.Id, PipelineId = running.PipelineId, Status = RunStatus.Failed, StartedAt = running.StartedAt, FinishedAt = DateTime.UtcNow, ErrorMessage = "boom" });

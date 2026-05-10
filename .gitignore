@@ -1,0 +1,107 @@
+# ============================================================
+#  Nexus — monorepo .gitignore  (Next.js + .NET + infrastructure)
+# ============================================================
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE / editors ────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+
+# ── Environment & secrets ────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+
+# ============================================================
+#  Frontend  (Next.js / Node)
+# ============================================================
+
+# dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+frontend/.yarn/*
+!frontend/.yarn/patches
+!frontend/.yarn/plugins
+!frontend/.yarn/releases
+!frontend/.yarn/versions
+
+# next.js
+frontend/.next/
+frontend/out/
+
+# production build
+frontend/build/
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# testing
+frontend/coverage/
+
+# typescript
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+# vercel
+frontend/.vercel/
+
+# ============================================================
+#  Backend  (.NET)
+# ============================================================
+
+# Build outputs
+backend/**/bin/
+backend/**/obj/
+
+# NuGet
+backend/**/*.nupkg
+backend/**/*.snupkg
+backend/**/project.nuget.cache
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / ReSharper
+backend/**/_ReSharper*/
+backend/**/*.[Rr]e[Ss]harper
+backend/**/*.DotSettings.user
+
+# dotnet tool manifests lock
+backend/.config/
+
+# Test results
+backend/**/TestResults/
+backend/**/coverage/
+
+# Publish output
+backend/**/publish/
+
+# ============================================================
+#  Infrastructure
+# ============================================================
+
+# Docker persistent volumes (local dev only)
+docker-data/
+
+# Terraform / IaC
+*.tfstate
+*.tfstate.backup
+.terraform/

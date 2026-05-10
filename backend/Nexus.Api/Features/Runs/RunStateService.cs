@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using Nexus.Api.Domain;
 using Nexus.Api.Infrastructure.SignalR;
 using Nexus.Api.Infrastructure.SignalR.Events;
+using Nexus.Api.Features.Alerts;
 
 namespace Nexus.Api.Features.Runs;
 
@@ -10,15 +11,18 @@ public class RunStateService
     private readonly IMongoCollection<JobRun> _runs;
     private readonly IMongoCollection<JobRunStep> _steps;
     private readonly INotificationService _notifications;
+    private readonly IAlertEvaluator _alertEvaluator;
 
     public RunStateService(
         IMongoCollection<JobRun> runs,
         IMongoCollection<JobRunStep> steps,
-        INotificationService notifications)
+        INotificationService notifications,
+        IAlertEvaluator alertEvaluator)
     {
         _runs = runs;
         _steps = steps;
         _notifications = notifications;
+        _alertEvaluator = alertEvaluator;
     }
 
     public async Task Start(JobRun run, CancellationToken ct = default)
@@ -150,5 +154,7 @@ public class RunStateService
             new RunStateChanged(updated.Id, updated.PipelineId, updated.Status, updated.StartedAt, updated.FinishedAt, updated.ErrorMessage),
             ct);
         await _notifications.PipelineUpdated(updated.PipelineId, "updated", ct);
+
+        await _alertEvaluator.EvaluateForRun(updated.Id, ct);
     }
 }

@@ -34,6 +34,12 @@ public static class MongoRegistration
         services.AddSingleton<IMongoCollection<JobRunStep>>(sp =>
             sp.GetRequiredService<IMongoDatabase>().GetCollection<JobRunStep>("jobRunSteps"));
 
+        services.AddSingleton<IMongoCollection<AlertRule>>(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<AlertRule>("alertRules"));
+
+        services.AddSingleton<IMongoCollection<AlertEvent>>(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<AlertEvent>("alertEvents"));
+
         return services;
     }
 }

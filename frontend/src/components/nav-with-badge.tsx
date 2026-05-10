@@ -1,13 +1,13 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { Nav } from "./nav";
-import { dashboardApi } from "@/api/dashboard";
+import { alertsApi } from "@/api/alerts";
 
 export function NavWithBadge() {
   const { data } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => dashboardApi.summary().catch(() => null),
+    queryKey: ["alerts"],
+    queryFn: () => alertsApi.listEvents().catch(() => []),
     staleTime: 10_000,
   });
-  return <Nav openAlerts={data?.openAlerts ?? 0} />;
+  return <Nav openAlerts={data?.length ?? 0} />;
 }

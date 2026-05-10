@@ -18,6 +18,7 @@ import { Table, THead, TR, TH, TBody, TD } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/empty-state";
 import { ApiError } from "@/api/client";
 import { formatDate } from "@/lib/utils";
+import { AlertRulesSection } from "./alert-rules-section";
 
 export function PipelineDetail({ id, initialData, dataset }: {
   id: string;
@@ -114,6 +115,8 @@ export function PipelineDetail({ id, initialData, dataset }: {
       </Card>
 
       <RecentRunsCard pipelineId={id} />
+
+      <AlertRulesSection pipelineId={id} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
