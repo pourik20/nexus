@@ -28,6 +28,12 @@ public static class MongoRegistration
         services.AddSingleton<IMongoCollection<Pipeline>>(sp =>
             sp.GetRequiredService<IMongoDatabase>().GetCollection<Pipeline>("pipelines"));
 
+        services.AddSingleton<IMongoCollection<JobRun>>(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<JobRun>("jobRuns"));
+
+        services.AddSingleton<IMongoCollection<JobRunStep>>(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<JobRunStep>("jobRunSteps"));
+
         return services;
     }
 }

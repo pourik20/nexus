@@ -6,7 +6,7 @@ namespace Nexus.Api.Features.Pipelines;
 
 public static class PipelineMapping
 {
-    public static PipelineDto ToDto(this Pipeline p) =>
+    public static PipelineDto ToDto(this Pipeline p, DateTime? lastRunAt = null, string? lastRunStatus = null) =>
         new(
             p.Id,
             p.DatasetId,
@@ -20,8 +20,8 @@ public static class PipelineMapping
                 .ToList(),
             p.CreatedAt,
             p.UpdatedAt,
-            LastRunAt: null,
-            LastRunStatus: null);
+            LastRunAt: lastRunAt,
+            LastRunStatus: lastRunStatus);
 
     public static PipelineVersionDto ToDto(this PipelineVersion v) =>
         new(v.Id, v.Version, BsonToJson(v.Config), v.Active, v.CreatedAt);

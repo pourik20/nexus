@@ -5,7 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { pipelinesApi, type Pipeline } from "@/api/pipelines";
+import { runsApi, type JobRun } from "@/api/runs";
 import type { Dataset } from "@/api/datasets";
+import { RunStatusBadge, formatDuration } from "@/components/run-status-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +88,7 @@ export function PipelineDetail({ id, initialData, dataset }: {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <RunPipelineButton pipelineId={id} active={data.active} />
           <Button
             variant="outline"
             disabled={toggleActive.isPending}
@@ -109,6 +112,8 @@ export function PipelineDetail({ id, initialData, dataset }: {
           <Field label="ID" value={<code className="font-mono text-xs">{data.id}</code>} />
         </CardContent>
       </Card>
+
+      <RecentRunsCard pipelineId={id} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -159,6 +164,69 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
       <div className="text-xs uppercase tracking-wide text-zinc-500">{label}</div>
       <div className="mt-0.5">{value}</div>
     </div>
+  );
+}
+
+function RunPipelineButton({ pipelineId, active }: { pipelineId: string; active: boolean }) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => runsApi.triggerForPipeline(pipelineId),
+    onSuccess: (run) => {
+      toast.success("Run started");
+      qc.invalidateQueries({ queryKey: ["runs"] });
+      qc.invalidateQueries({ queryKey: ["pipeline-runs", pipelineId] });
+      qc.invalidateQueries({ queryKey: ["run", run.id] });
+    },
+    onError: (err: unknown) =>
+      toast.error(err instanceof ApiError ? err.problem.title ?? err.message : (err as Error).message),
+  });
+  return (
+    <Button onClick={() => m.mutate()} disabled={!active || m.isPending}>
+      {m.isPending ? "Starting…" : "Run pipeline"}
+    </Button>
+  );
+}
+
+function RecentRunsCard({ pipelineId }: { pipelineId: string }) {
+  const { data } = useQuery({
+    queryKey: ["pipeline-runs", pipelineId],
+    queryFn: () => runsApi.list({ pipelineId }),
+  });
+  const runs = (data ?? []).slice(0, 10);
+  return (
+    <Card>
+      <CardHeader><CardTitle>Recent runs</CardTitle></CardHeader>
+      <CardContent>
+        {runs.length === 0 ? (
+          <p className="text-sm text-zinc-500">No runs yet.</p>
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Status</TH>
+                <TH>Started</TH>
+                <TH>Duration</TH>
+                <TH>Records</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {runs.map((r: JobRun) => (
+                <TR key={r.id}>
+                  <TD><RunStatusBadge status={r.status} /></TD>
+                  <TD>{formatDate(r.startedAt)}</TD>
+                  <TD>{formatDuration(r.startedAt, r.finishedAt)}</TD>
+                  <TD>{r.recordsProcessed}</TD>
+                  <TD className="text-right">
+                    <Link href={`/runs/${r.id}`} className="text-sm text-zinc-500 hover:underline">View →</Link>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

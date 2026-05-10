@@ -15,6 +15,7 @@ import { Table, THead, TR, TH, TBody, TD } from "@/components/ui/table";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/empty-state";
 import { ApiError } from "@/api/client";
 import { formatDate } from "@/lib/utils";
+import { RunStatusBadge } from "@/components/run-status-badge";
 
 export function PipelinesTable({ initialData, datasets }: { initialData: Pipeline[]; datasets: Dataset[] }) {
   const { data, isLoading, isError, error } = useQuery({
@@ -48,6 +49,8 @@ export function PipelinesTable({ initialData, datasets }: { initialData: Pipelin
             <TH>Dataset</TH>
             <TH>Schedule</TH>
             <TH>Active</TH>
+            <TH>Last run</TH>
+            <TH>Last status</TH>
             <TH>Created</TH>
             <TH />
           </TR>
@@ -64,6 +67,8 @@ export function PipelinesTable({ initialData, datasets }: { initialData: Pipelin
               </TD>
               <TD className="font-mono text-xs">{p.schedule || "—"}</TD>
               <TD>{p.active ? <Badge variant="success">active</Badge> : <Badge variant="muted">paused</Badge>}</TD>
+              <TD>{p.lastRunAt ? formatDate(p.lastRunAt) : "—"}</TD>
+              <TD>{p.lastRunStatus ? <RunStatusBadge status={p.lastRunStatus} /> : "—"}</TD>
               <TD>{formatDate(p.createdAt)}</TD>
               <TD className="text-right"><Link href={`/pipelines/${p.id}`} className="text-sm text-zinc-500 hover:underline">View →</Link></TD>
             </TR>
