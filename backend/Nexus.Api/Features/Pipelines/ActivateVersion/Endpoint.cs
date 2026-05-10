@@ -1,4 +1,3 @@
-using MongoDB.Bson;
 using MongoDB.Driver;
 using Nexus.Api.Domain;
 using Nexus.Api.Infrastructure.SignalR;
@@ -16,40 +15,29 @@ public static class ActivateVersionEndpoint
             INotificationService notifications,
             CancellationToken ct) =>
         {
-            var filter = Builders<Pipeline>.Filter.And(
+            var pipeline = await col.Find(p => p.Id == id).FirstOrDefaultAsync(ct);
+            if (pipeline is null)
+                return Results.Problem(title: "Pipeline not found", statusCode: 404);
+
+            var target = pipeline.Versions.FirstOrDefault(v => v.Id == versionId);
+            if (target is null)
+                return Results.Problem(title: "Version not found", statusCode: 404);
+
+            foreach (var version in pipeline.Versions)
+                version.Active = version.Id == versionId;
+
+            pipeline.UpdatedAt = DateTime.UtcNow;
+
+            var updated = await col.FindOneAndUpdateAsync(
                 Builders<Pipeline>.Filter.Eq(p => p.Id, id),
-                Builders<Pipeline>.Filter.ElemMatch(p => p.Versions, v => v.Id == versionId));
-
-            var update = Builders<Pipeline>.Update
-                .Set("Versions.$[target].Active", true)
-                .Set("Versions.$[other].Active", false)
-                .Set(p => p.UpdatedAt, DateTime.UtcNow);
-
-            var arrayFilters = new List<ArrayFilterDefinition>
-            {
-                new BsonDocumentArrayFilterDefinition<BsonDocument>(
-                    new BsonDocument("target.Id", versionId)),
-                new BsonDocumentArrayFilterDefinition<BsonDocument>(
-                    new BsonDocument("other.Id", new BsonDocument("$ne", versionId))),
-            };
-
-            var updated = await col.FindOneAndUpdateAsync<Pipeline>(
-                filter,
-                update,
-                new FindOneAndUpdateOptions<Pipeline>
-                {
-                    ReturnDocument = ReturnDocument.After,
-                    ArrayFilters = arrayFilters,
-                },
+                Builders<Pipeline>.Update
+                    .Set(p => p.Versions, pipeline.Versions)
+                    .Set(p => p.UpdatedAt, pipeline.UpdatedAt),
+                new FindOneAndUpdateOptions<Pipeline> { ReturnDocument = ReturnDocument.After },
                 ct);
 
             if (updated is null)
-            {
-                var pipelineExists = await col.Find(p => p.Id == id).AnyAsync(ct);
-                return pipelineExists
-                    ? Results.Problem(title: "Version not found", statusCode: 404)
-                    : Results.Problem(title: "Pipeline not found", statusCode: 404);
-            }
+                return Results.Problem(title: "Pipeline not found", statusCode: 404);
 
             await notifications.PipelineUpdated(updated.Id, "updated", ct);
             return Results.Ok(updated.ToDto());
