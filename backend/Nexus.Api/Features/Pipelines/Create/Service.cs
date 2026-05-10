@@ -43,7 +43,7 @@ public class CreatePipelineService
                     Id = Guid.NewGuid().ToString("N"),
                     Version = 1,
                     Config = new BsonDocument(),
-                    Active = true,
+                    IsCurrent = true,
                     CreatedAt = now,
                 },
             },

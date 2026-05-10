@@ -10,6 +10,7 @@ public class AlertEvent
     public string RunId { get; set; } = default!;
     public string PipelineId { get; set; } = default!;
     public string Message { get; set; } = default!;
-    public string Severity { get; set; } = default!; // "info" | "warning" | "error"
+    public string Severity { get; set; } = default!;
     public DateTime CreatedAt { get; set; }
+    public DateTime? AcknowledgedAt { get; set; }
 }

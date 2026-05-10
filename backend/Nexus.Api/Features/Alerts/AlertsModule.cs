@@ -23,9 +23,8 @@ public static class AlertsModule
                 Id = Guid.NewGuid().ToString("N"),
                 PipelineId = req.PipelineId,
                 Name = req.Name,
-                Type = req.Type,
-                RuntimeThreshold = req.RuntimeThreshold,
                 Expression = req.Expression,
+                Severity = req.Severity ?? "warning",
                 Enabled = req.Enabled,
                 CreatedAt = DateTime.UtcNow
             };
@@ -37,10 +36,10 @@ public static class AlertsModule
 
         group.MapGet("/alert-rules", async ([FromQuery] string? pipelineId, IMongoCollection<AlertRule> rules, CancellationToken ct) =>
         {
-            var filter = pipelineId == null 
-                ? Builders<AlertRule>.Filter.Empty 
+            var filter = pipelineId == null
+                ? Builders<AlertRule>.Filter.Empty
                 : Builders<AlertRule>.Filter.Eq(r => r.PipelineId, pipelineId);
-                
+
             var result = await rules.Find(filter).ToListAsync(ct);
             return Results.Ok(result.Select(ToDto));
         })
@@ -58,46 +57,16 @@ public static class AlertsModule
             var rule = await rules.Find(r => r.Id == id).FirstOrDefaultAsync(ct);
             if (rule == null) return Results.NotFound();
 
-            var newType = req.Type ?? rule.Type;
-            // Treat empty string as a request to nullify the threshold.
-            var newThreshold = req.RuntimeThreshold != null 
-                ? (req.RuntimeThreshold == "" ? null : req.RuntimeThreshold) 
-                : rule.RuntimeThreshold;
-            
-            if (newType == AlertRuleType.RuntimeExceeds && string.IsNullOrEmpty(newThreshold))
-            {
-                return Results.Problem(
-                    detail: "RuntimeThreshold is required when Type is RuntimeExceeds.", 
-                    statusCode: 400,
-                    extensions: new Dictionary<string, object?> { { "errors", new { runtimeThreshold = new[] { "RuntimeThreshold is required when Type is RuntimeExceeds." } } } });
-            }
-            if (newType == AlertRuleType.RunFailed && !string.IsNullOrEmpty(newThreshold))
-            {
-                return Results.Problem(
-                    detail: "RuntimeThreshold must be null when Type is RunFailed.", 
-                    statusCode: 400,
-                    extensions: new Dictionary<string, object?> { { "errors", new { runtimeThreshold = new[] { "RuntimeThreshold must be null when Type is RunFailed." } } } });
-            }
-
             var update = Builders<AlertRule>.Update.Combine();
             bool hasUpdate = false;
 
             if (req.Name != null) { update = update.Set(r => r.Name, req.Name); rule.Name = req.Name; hasUpdate = true; }
-            if (req.Type != null) { update = update.Set(r => r.Type, req.Type); rule.Type = req.Type; hasUpdate = true; }
-            if (req.RuntimeThreshold != null) 
-            { 
-                var val = req.RuntimeThreshold == "" ? null : req.RuntimeThreshold;
-                update = update.Set(r => r.RuntimeThreshold, val); 
-                rule.RuntimeThreshold = val; 
-                hasUpdate = true; 
-            }
             if (req.Expression != null) { update = update.Set(r => r.Expression, req.Expression); rule.Expression = req.Expression; hasUpdate = true; }
+            if (req.Severity != null) { update = update.Set(r => r.Severity, req.Severity); rule.Severity = req.Severity; hasUpdate = true; }
             if (req.Enabled.HasValue) { update = update.Set(r => r.Enabled, req.Enabled.Value); rule.Enabled = req.Enabled.Value; hasUpdate = true; }
 
             if (hasUpdate)
-            {
                 await rules.UpdateOneAsync(r => r.Id == id, update, cancellationToken: ct);
-            }
 
             return Results.Ok(ToDto(rule));
         })
@@ -112,11 +81,12 @@ public static class AlertsModule
         .WithName("DeleteAlertRule");
 
         group.MapGet("/alerts", async (
-            [FromQuery] string? pipelineId, 
-            [FromQuery] string? severity, 
-            [FromQuery] DateTime? createdAfter, 
-            [FromQuery] DateTime? createdBefore, 
-            IMongoCollection<AlertEvent> events, 
+            [FromQuery] string? pipelineId,
+            [FromQuery] string? severity,
+            [FromQuery] bool? acknowledged,
+            [FromQuery] DateTime? createdAfter,
+            [FromQuery] DateTime? createdBefore,
+            IMongoCollection<AlertEvent> events,
             CancellationToken ct) =>
         {
             var builder = Builders<AlertEvent>.Filter;
@@ -124,6 +94,8 @@ public static class AlertsModule
 
             if (pipelineId != null) filter &= builder.Eq(e => e.PipelineId, pipelineId);
             if (severity != null) filter &= builder.Eq(e => e.Severity, severity);
+            if (acknowledged == false) filter &= builder.Eq(e => e.AcknowledgedAt, null);
+            if (acknowledged == true) filter &= builder.Ne(e => e.AcknowledgedAt, null);
             if (createdAfter != null) filter &= builder.Gte(e => e.CreatedAt, createdAfter);
             if (createdBefore != null) filter &= builder.Lte(e => e.CreatedAt, createdBefore);
 
@@ -138,15 +110,38 @@ public static class AlertsModule
             if (evt == null) return Results.NotFound();
 
             var rule = await rules.Find(r => r.Id == evt.RuleId).FirstOrDefaultAsync(ct);
-            
+
             return Results.Ok(new AlertEventDetailDto(
-                evt.Id, evt.RuleId, evt.RunId, evt.PipelineId, evt.Message, evt.Severity, evt.CreatedAt,
+                evt.Id, evt.RuleId, evt.RunId, evt.PipelineId, evt.Message, evt.Severity, evt.CreatedAt, evt.AcknowledgedAt,
                 rule == null ? null! : ToDto(rule)
             ));
         })
         .WithName("GetAlertDetail");
+
+        group.MapPost("/alerts/{id}/acknowledge", async (string id, IMongoCollection<AlertEvent> events, CancellationToken ct) =>
+        {
+            var updated = await events.FindOneAndUpdateAsync(
+                Builders<AlertEvent>.Filter.And(
+                    Builders<AlertEvent>.Filter.Eq(e => e.Id, id),
+                    Builders<AlertEvent>.Filter.Eq(e => e.AcknowledgedAt, null)),
+                Builders<AlertEvent>.Update.Set(e => e.AcknowledgedAt, DateTime.UtcNow),
+                new FindOneAndUpdateOptions<AlertEvent> { ReturnDocument = ReturnDocument.After },
+                ct);
+
+            if (updated == null)
+            {
+                var exists = await events.Find(e => e.Id == id).AnyAsync(ct);
+                return exists ? Results.Ok() : Results.NotFound();
+            }
+
+            return Results.Ok(ToEventDto(updated));
+        })
+        .WithName("AcknowledgeAlert");
     }
 
-    private static AlertRuleDto ToDto(AlertRule r) => new(r.Id, r.PipelineId, r.Name, r.Type, r.RuntimeThreshold, r.Expression, r.Enabled, r.CreatedAt);
-    private static AlertEventDto ToEventDto(AlertEvent e) => new(e.Id, e.RuleId, e.RunId, e.PipelineId, e.Message, e.Severity, e.CreatedAt);
+    private static AlertRuleDto ToDto(AlertRule r) =>
+        new(r.Id, r.PipelineId, r.Name, r.Expression, r.Severity, r.Enabled, r.CreatedAt);
+
+    private static AlertEventDto ToEventDto(AlertEvent e) =>
+        new(e.Id, e.RuleId, e.RunId, e.PipelineId, e.Message, e.Severity, e.CreatedAt, e.AcknowledgedAt);
 }

@@ -6,7 +6,7 @@ public record PipelineVersionDto(
     string Id,
     int Version,
     JsonElement Config,
-    bool Active,
+    bool IsCurrent,
     DateTime CreatedAt);
 
 public record PipelineDto(

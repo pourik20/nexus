@@ -22,6 +22,6 @@ public class PipelineVersion
     public string Id { get; set; } = default!;
     public int Version { get; set; }
     public BsonDocument Config { get; set; } = new();
-    public bool Active { get; set; }
+    public bool IsCurrent { get; set; }
     public DateTime CreatedAt { get; set; }
 }

@@ -56,7 +56,8 @@ public class RunSimulator : IRunSimulator
                 await state.CompleteStep(runId, stepName, success: true);
             }
 
-            await state.Complete(runId, success: true);
+            var records = random.Next(1000, 100_001);
+            await state.Complete(runId, success: true, recordsProcessed: records);
         }
         catch (Exception ex)
         {

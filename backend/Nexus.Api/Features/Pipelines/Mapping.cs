@@ -24,7 +24,7 @@ public static class PipelineMapping
             LastRunStatus: lastRunStatus);
 
     public static PipelineVersionDto ToDto(this PipelineVersion v) =>
-        new(v.Id, v.Version, BsonToJson(v.Config), v.Active, v.CreatedAt);
+        new(v.Id, v.Version, BsonToJson(v.Config), v.IsCurrent, v.CreatedAt);
 
     public static BsonDocument JsonToBson(JsonElement el) =>
         BsonDocument.Parse(el.GetRawText());

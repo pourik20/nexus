@@ -1,15 +1,11 @@
-import { api } from "./client";
 import { API_BASE_URL } from "@/lib/env";
 
-// Response DTOs — defined manually since the backend returns untyped Results.Ok()
-// and openapi-typescript cannot infer response schemas.
 export type AlertRuleDto = {
   id: string;
   pipelineId: string;
   name: string;
-  type: string;
-  runtimeThreshold: string | null;
   expression: string;
+  severity: string;
   enabled: boolean;
   createdAt: string;
 };
@@ -22,27 +18,25 @@ export type AlertEventDto = {
   message: string;
   severity: string;
   createdAt: string;
+  acknowledgedAt: string | null;
 };
 
 export type AlertEventDetailDto = AlertEventDto & {
   rule: AlertRuleDto;
 };
 
-// Request types — match the backend DTOs exactly
 export type CreateAlertRuleRequest = {
   pipelineId: string;
   name: string;
-  type: string;
-  runtimeThreshold: string | null;
   expression: string;
+  severity?: string;
   enabled: boolean;
 };
 
 export type UpdateAlertRuleRequest = {
   name?: string | null;
-  type?: string | null;
-  runtimeThreshold?: string | null;
   expression?: string | null;
+  severity?: string | null;
   enabled?: boolean | null;
 };
 
@@ -94,10 +88,11 @@ export const alertsApi = {
     }
   },
 
-  listEvents: async (params?: { pipelineId?: string; severity?: string; createdAfter?: string; createdBefore?: string }): Promise<AlertEventDto[]> => {
+  listEvents: async (params?: { pipelineId?: string; severity?: string; acknowledged?: boolean; createdAfter?: string; createdBefore?: string }): Promise<AlertEventDto[]> => {
     const sp = new URLSearchParams();
     if (params?.pipelineId) sp.set("pipelineId", params.pipelineId);
     if (params?.severity) sp.set("severity", params.severity);
+    if (params?.acknowledged !== undefined) sp.set("acknowledged", String(params.acknowledged));
     if (params?.createdAfter) sp.set("createdAfter", params.createdAfter);
     if (params?.createdBefore) sp.set("createdBefore", params.createdBefore);
     const res = await fetch(`${API_BASE_URL}/alerts?${sp}`, { cache: "no-store" });
@@ -107,5 +102,10 @@ export const alertsApi = {
   getEventDetail: async (id: string): Promise<AlertEventDetailDto> => {
     const res = await fetch(`${API_BASE_URL}/alerts/${id}`, { cache: "no-store" });
     return json<AlertEventDetailDto>(res);
+  },
+
+  acknowledge: async (id: string): Promise<AlertEventDto> => {
+    const res = await fetch(`${API_BASE_URL}/alerts/${id}/acknowledge`, { method: "POST" });
+    return json<AlertEventDto>(res);
   },
 };

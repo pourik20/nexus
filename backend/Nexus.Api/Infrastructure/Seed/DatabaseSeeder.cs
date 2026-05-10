@@ -68,9 +68,9 @@ public class DatabaseSeeder
             CreatedAt = Ago(20), UpdatedAt = Ago(1),
             Versions = new List<PipelineVersion>
             {
-                new() { Id = "plv-ti-1", Version = 1, Active = false, CreatedAt = Ago(20),
+                new() { Id = "plv-ti-1", Version = 1, IsCurrent = false, CreatedAt = Ago(20),
                     Config = new BsonDocument { { "source", "kafka://telemetry" }, { "sink", "warehouse://raw_telemetry" } } },
-                new() { Id = "plv-ti-2", Version = 2, Active = true,  CreatedAt = Ago(10),
+                new() { Id = "plv-ti-2", Version = 2, IsCurrent = true, CreatedAt = Ago(10),
                     Config = new BsonDocument { { "source", "kafka://telemetry" }, { "sink", "warehouse://normalised_telemetry" }, { "normalise", true } } },
             }
         };
@@ -83,7 +83,7 @@ public class DatabaseSeeder
             CreatedAt = Ago(18), UpdatedAt = Ago(2),
             Versions = new List<PipelineVersion>
             {
-                new() { Id = "plv-ce-1", Version = 1, Active = true, CreatedAt = Ago(18),
+                new() { Id = "plv-ce-1", Version = 1, IsCurrent = true, CreatedAt = Ago(18),
                     Config = new BsonDocument { { "source", "postgres://charging_raw" }, { "sink", "warehouse://charging_kpis" } } },
             }
         };
@@ -96,7 +96,7 @@ public class DatabaseSeeder
             CreatedAt = Ago(15), UpdatedAt = Ago(3),
             Versions = new List<PipelineVersion>
             {
-                new() { Id = "plv-ta-1", Version = 1, Active = true, CreatedAt = Ago(15),
+                new() { Id = "plv-ta-1", Version = 1, IsCurrent = true, CreatedAt = Ago(15),
                     Config = new BsonDocument { { "source", "warehouse://trip_records" }, { "sink", "warehouse://trip_daily_agg" }, { "groupBy", "zone,vehicle_class" } } },
             }
         };
@@ -109,7 +109,7 @@ public class DatabaseSeeder
             CreatedAt = Ago(12), UpdatedAt = Ago(4),
             Versions = new List<PipelineVersion>
             {
-                new() { Id = "plv-pm-1", Version = 1, Active = true, CreatedAt = Ago(12),
+                new() { Id = "plv-pm-1", Version = 1, IsCurrent = true, CreatedAt = Ago(12),
                     Config = new BsonDocument { { "model", "wear-score-v3" }, { "threshold", 0.85 }, { "sink", "tickets://maintenance" } } },
             }
         };
@@ -121,14 +121,12 @@ public class DatabaseSeeder
         var rule1 = new AlertRule
         {
             Id = "rule-runtime", PipelineId = p1.Id, Name = "Runtime Exceeds 10s",
-            Type = AlertRuleType.RuntimeExceeds, RuntimeThreshold = "00:00:10",
-            Expression = "runtime > 10", Enabled = true, CreatedAt = Ago(10)
+            Expression = "runtime > 10", Severity = "warning", Enabled = true, CreatedAt = Ago(10)
         };
         var rule2 = new AlertRule
         {
             Id = "rule-failed", PipelineId = p2.Id, Name = "Run Failed",
-            Type = AlertRuleType.RunFailed, RuntimeThreshold = null,
-            Expression = "status = \"failed\"", Enabled = true, CreatedAt = Ago(8)
+            Expression = "status = \"failed\"", Severity = "error", Enabled = true, CreatedAt = Ago(8)
         };
 
         await _alertRules.InsertManyAsync(new[] { rule1, rule2 });

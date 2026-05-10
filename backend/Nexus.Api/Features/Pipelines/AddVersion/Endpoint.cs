@@ -31,7 +31,7 @@ public static class AddVersionEndpoint
                 Id = Guid.NewGuid().ToString("N"),
                 Version = nextVersion,
                 Config = configBson,
-                Active = false,
+                IsCurrent = false,
                 CreatedAt = DateTime.UtcNow,
             };
 

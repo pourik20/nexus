@@ -170,8 +170,6 @@ function RuleDialog({
       if (initialData) {
         const req: UpdateAlertRuleRequest = {
           name: form.name,
-          type: initialData.type ?? 'RunFailed',
-          runtimeThreshold: null,
           expression: form.expression,
           enabled: form.enabled,
         }
@@ -180,8 +178,6 @@ function RuleDialog({
       const req: CreateAlertRuleRequest = {
         pipelineId,
         name: form.name,
-        type: 'RunFailed',
-        runtimeThreshold: null,
         expression: form.expression,
         enabled: form.enabled,
       }

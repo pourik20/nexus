@@ -5,7 +5,7 @@ export type PipelineVersion = {
   id: string;
   version: number;
   config: Record<string, unknown>;
-  active: boolean;
+  isCurrent: boolean;
   createdAt: string;
 };
 

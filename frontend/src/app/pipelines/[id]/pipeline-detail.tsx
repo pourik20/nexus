@@ -186,13 +186,13 @@ export function PipelineDetail({
                 <TR key={v.id}>
                   <TD className='font-medium'>v{v.version}</TD>
                   <TD>
-                    {v.active ?
+                    {v.isCurrent ?
                       <Badge variant='success'>active</Badge>
                     : <Badge variant='muted'>inactive</Badge>}
                   </TD>
                   <TD>{formatDate(v.createdAt)}</TD>
                   <TD className='text-right'>
-                    {!v.active && (
+                    {!v.isCurrent && (
                       <Button
                         size='sm'
                         variant='outline'

@@ -24,7 +24,7 @@ public static class ActivateVersionEndpoint
                 return Results.Problem(title: "Version not found", statusCode: 404);
 
             foreach (var version in pipeline.Versions)
-                version.Active = version.Id == versionId;
+                version.IsCurrent = version.Id == versionId;
 
             pipeline.UpdatedAt = DateTime.UtcNow;
 

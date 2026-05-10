@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using Jsonata.Net.Native;
-using Jsonata.Net.Native.Json;
 using MongoDB.Driver;
 using Nexus.Api.Domain;
 using Nexus.Api.Infrastructure.SignalR;
@@ -69,7 +68,7 @@ public class AlertEvaluator : IAlertEvaluator
                         RunId = run.Id,
                         PipelineId = run.PipelineId,
                         Message = $"Rule '{rule.Name}' matched on run {run.Id}.",
-                        Severity = rule.Type == AlertRuleType.RunFailed ? "error" : "warning",
+                        Severity = rule.Severity,
                         CreatedAt = DateTime.UtcNow
                     };
 

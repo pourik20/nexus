@@ -24,7 +24,7 @@ public static class PatchRunEndpoint
                     $"Status must be '{RunStatus.Success}' or '{RunStatus.Failed}'.",
                     nameof(req.Status));
 
-            await state.Complete(id, success: req.Status == RunStatus.Success, errorMessage: req.ErrorMessage, ct: ct);
+            await state.Complete(id, success: req.Status == RunStatus.Success, errorMessage: req.ErrorMessage, ct: ct, recordsProcessed: 0);
 
             var updated = await runs.Find(r => r.Id == id).FirstOrDefaultAsync(ct);
             var runSteps = await steps.Find(s => s.RunId == id).SortBy(s => s.Order).ToListAsync(ct);

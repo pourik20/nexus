@@ -112,7 +112,6 @@ Features/
   RunsModule.cs
   RunStateService.cs
 Infrastructure/
- Auth/ICurrentUser.cs
  Errors/ExceptionHandling.cs
  Mongo/
   IndexInitializerHostedService.cs

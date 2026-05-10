@@ -119,7 +119,7 @@ public class RunStateService
             ct);
     }
 
-    public async Task Complete(string runId, bool success, string? errorMessage = null, CancellationToken ct = default)
+    public async Task Complete(string runId, bool success, int recordsProcessed = 0, string? errorMessage = null, CancellationToken ct = default)
     {
         var run = await _runs.Find(r => r.Id == runId).FirstOrDefaultAsync(ct);
         if (run is null)
@@ -136,8 +136,8 @@ public class RunStateService
             .Set(r => r.FinishedAt, now);
         if (!string.IsNullOrWhiteSpace(errorMessage))
             update = update.Set(r => r.ErrorMessage, errorMessage);
-        if (success)
-            update = update.Set(r => r.RecordsProcessed, run.RecordsProcessed > 0 ? run.RecordsProcessed : 1000);
+        if (success && recordsProcessed > 0)
+            update = update.Set(r => r.RecordsProcessed, recordsProcessed);
 
         var updated = await _runs.FindOneAndUpdateAsync<JobRun>(
             Builders<JobRun>.Filter.And(

@@ -21,7 +21,7 @@ public static class CreateRunEndpoint
             if (!pipeline.Active)
                 throw new DomainException("Pipeline is not active.");
 
-            var activeVersion = pipeline.Versions.FirstOrDefault(v => v.Active)
+            var activeVersion = pipeline.Versions.FirstOrDefault(v => v.IsCurrent)
                 ?? pipeline.Versions.OrderByDescending(v => v.Version).FirstOrDefault();
             if (activeVersion is null)
                 throw new DomainException("Pipeline has no versions.");

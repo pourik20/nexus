@@ -5,7 +5,6 @@ using Nexus.Api.Features.Runs;
 using Nexus.Api.Features.Alerts;
 using Nexus.Api.Features.Dashboard;
 using Nexus.Api.Infrastructure.Seed;
-using Nexus.Api.Infrastructure.Auth;
 using Nexus.Api.Infrastructure.Errors;
 using Nexus.Api.Infrastructure.Mongo;
 using Nexus.Api.Infrastructure.SignalR;
@@ -21,8 +20,6 @@ builder.WebHost.ConfigureKestrel(o => o.ListenAnyIP(3001));
 
 builder.Services.AddMongo(builder.Configuration);
 builder.Services.AddHostedService<IndexInitializerHostedService>();
-
-builder.Services.AddSingleton<ICurrentUser, HardcodedAdminUser>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddScoped(typeof(Nexus.Api.Infrastructure.Validation.ValidationFilter<>));
