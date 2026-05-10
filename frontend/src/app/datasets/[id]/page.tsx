@@ -1,4 +1,4 @@
-import { datasetsApi } from "@/api/datasets";
+import { datasetsApi, type Dataset } from "@/api/datasets";
 import { ApiError } from "@/api/client";
 import { ErrorState } from "@/components/ui/empty-state";
 import { DatasetDetail } from "./dataset-detail";
@@ -6,20 +6,27 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function DatasetDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+async function loadDataset(id: string): Promise<{ dataset: Dataset } | { notFound: true }> {
   try {
-    const d = await datasetsApi.get(id);
-    return <DatasetDetail id={id} initialData={d} />;
+    return { dataset: await datasetsApi.get(id) };
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      return (
-        <div className="space-y-3">
-          <ErrorState message="Dataset not found." />
-          <Link href="/datasets" className="text-sm underline">Back to datasets</Link>
-        </div>
-      );
-    }
+    if (err instanceof ApiError && err.status === 404) return { notFound: true };
     throw err;
   }
+}
+
+export default async function DatasetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const result = await loadDataset(id);
+
+  if ("notFound" in result) {
+    return (
+      <div className="space-y-3">
+        <ErrorState message="Dataset not found." />
+        <Link href="/datasets" className="text-sm underline">Back to datasets</Link>
+      </div>
+    );
+  }
+
+  return <DatasetDetail id={id} initialData={result.dataset} />;
 }

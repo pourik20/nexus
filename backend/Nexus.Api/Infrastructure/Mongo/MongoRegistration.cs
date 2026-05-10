@@ -25,6 +25,9 @@ public static class MongoRegistration
         services.AddSingleton<IMongoCollection<Dataset>>(sp =>
             sp.GetRequiredService<IMongoDatabase>().GetCollection<Dataset>("datasets"));
 
+        services.AddSingleton<IMongoCollection<Pipeline>>(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<Pipeline>("pipelines"));
+
         return services;
     }
 }

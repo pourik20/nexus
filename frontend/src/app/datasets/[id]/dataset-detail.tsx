@@ -1,11 +1,15 @@
 "use client";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { datasetsApi, type Dataset } from "@/api/datasets";
+import { pipelinesApi } from "@/api/pipelines";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ErrorState, LoadingState } from "@/components/ui/empty-state";
+import { Table, THead, TR, TH, TBody, TD } from "@/components/ui/table";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/empty-state";
 import { ApiError } from "@/api/client";
 import { formatDate } from "@/lib/utils";
 
@@ -56,7 +60,55 @@ export function DatasetDetail({ id, initialData }: { id: string; initialData: Da
           <Field label="ID" value={<code className="font-mono text-xs">{data.id}</code>} />
         </CardContent>
       </Card>
+
+      <PipelinesUsingDataset datasetId={id} />
     </div>
+  );
+}
+
+function PipelinesUsingDataset({ datasetId }: { datasetId: string }) {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["pipelines", { datasetId }],
+    queryFn: () => pipelinesApi.list({ datasetId }),
+  });
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Pipelines using this dataset</CardTitle></CardHeader>
+      <CardContent>
+        {isLoading && <LoadingState />}
+        {isError && <ErrorState message={(error as Error).message} />}
+        {!isLoading && !isError && (!data || data.length === 0) && (
+          <EmptyState title="No pipelines reference this dataset." />
+        )}
+        {data && data.length > 0 && (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Name</TH>
+                <TH>Schedule</TH>
+                <TH>Active</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {data.map((p) => (
+                <TR key={p.id}>
+                  <TD>
+                    <Link className="font-medium hover:underline" href={`/pipelines/${p.id}`}>{p.name}</Link>
+                  </TD>
+                  <TD className="font-mono text-xs">{p.schedule || "—"}</TD>
+                  <TD>{p.active ? <Badge variant="success">active</Badge> : <Badge variant="muted">paused</Badge>}</TD>
+                  <TD className="text-right">
+                    <Link href={`/pipelines/${p.id}`} className="text-sm text-zinc-500 hover:underline">View →</Link>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Nexus.Api.Features.Datasets;
+using Nexus.Api.Features.Pipelines;
 using Nexus.Api.Infrastructure.Auth;
 using Nexus.Api.Infrastructure.Errors;
 using Nexus.Api.Infrastructure.Mongo;
@@ -22,6 +23,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddScoped(typeof(Nexus.Api.Infrastructure.Validation.ValidationFilter<>));
 
 builder.Services.AddDatasets();
+builder.Services.AddPipelines();
 
 builder.Services.AddOpenApi();
 
@@ -38,6 +40,7 @@ app.UseCors();
 app.MapOpenApi();
 
 app.MapDatasets();
+app.MapPipelines();
 
 app.MapGet("/", () => Results.Ok(new { name = "Nexus API", status = "ok" }));
 

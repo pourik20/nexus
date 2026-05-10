@@ -51,3 +51,4 @@
 /Users/pourik/Desktop/nexus/backend/Nexus.Api/obj/Debug/net10.0/Nexus.Api.pdb
 /Users/pourik/Desktop/nexus/backend/Nexus.Api/obj/Debug/net10.0/Nexus.Api.genruntimeconfig.cache
 /Users/pourik/Desktop/nexus/backend/Nexus.Api/obj/Debug/net10.0/ref/Nexus.Api.dll
+/Users/pourik/Desktop/nexus/backend/Nexus.Api/obj/Debug/net10.0/Nexus.Api.sourcelink.json

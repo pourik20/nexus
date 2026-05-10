@@ -18,11 +18,18 @@ public class IndexInitializerHostedService : IHostedService
     {
         using var scope = _sp.CreateScope();
         var datasets = scope.ServiceProvider.GetRequiredService<IMongoCollection<Dataset>>();
+        var pipelines = scope.ServiceProvider.GetRequiredService<IMongoCollection<Pipeline>>();
 
         await datasets.Indexes.CreateOneAsync(
             new CreateIndexModel<Dataset>(
                 Builders<Dataset>.IndexKeys.Ascending(d => d.Name),
                 new CreateIndexOptions { Unique = true, Name = "ux_datasets_name" }),
+            cancellationToken: ct);
+
+        await pipelines.Indexes.CreateOneAsync(
+            new CreateIndexModel<Pipeline>(
+                Builders<Pipeline>.IndexKeys.Ascending(p => p.DatasetId),
+                new CreateIndexOptions { Name = "ix_pipelines_datasetId" }),
             cancellationToken: ct);
 
         _log.LogInformation("Mongo indexes ensured.");
